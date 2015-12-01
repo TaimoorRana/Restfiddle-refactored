@@ -1,0 +1,698 @@
+diff --git a/src/main/java/com/restfiddle/controller/rest/ApiController.java b/src/main/java/com/restfiddle/controller/rest/ApiController.java
+index 1b8f8b8..8e612c1 100644
+--- a/src/main/java/com/restfiddle/controller/rest/ApiController.java
++++ b/src/main/java/com/restfiddle/controller/rest/ApiController.java
+@@ -87,6 +87,7 @@ public class ApiController {
+ 
+     @RequestMapping(value = "/api/processor", method = RequestMethod.POST, headers = "Accept=application/json")
+     ConversationDTO requestProcessor(@RequestBody RfRequestDTO rfRequestDTO) {
++      // Long method. Refactor
+ 	Conversation existingConversation = null;
+ 	Conversation currentConversation = null;
+ 
+@@ -116,6 +117,7 @@ public class ApiController {
+ 	currentConversation = ConversationConverter.convertToEntity(rfRequestDTO, result);
+ 	
+ 	if (existingConversation != null) {
++    // Long message chain
+ 	    currentConversation.getRfRequest().setAssertion(existingConversation.getRfRequest().getAssertion());
+ 	}
+ 
+@@ -124,7 +126,7 @@ public class ApiController {
+ 	rfResponseRepository.save(currentConversation.getRfResponse());
+ 
+ 	currentConversation.setDuration(duration);
+-	
++	// Long Message Chain
+ 	Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+ 	if(principal instanceof User){
+ 	    currentConversation.setLastModifiedBy((User) principal);
+@@ -189,6 +191,7 @@ public class ApiController {
+     }
+ 
+     private List<NodeStatusResponseDTO> runNodes(List<BaseNode> listOfNodes) {
++      // Long method, does many things.
+ 	List<NodeStatusResponseDTO> nodeStatuses = new ArrayList<NodeStatusResponseDTO>();
+ 	NodeStatusResponseDTO nodeStatus = null;
+ 	for (BaseNode baseNode : listOfNodes) {
+diff --git a/src/main/java/com/restfiddle/controller/rest/GenerateApiController.java b/src/main/java/com/restfiddle/controller/rest/GenerateApiController.java
+index 43e891c..d0fff6d 100644
+--- a/src/main/java/com/restfiddle/controller/rest/GenerateApiController.java
++++ b/src/main/java/com/restfiddle/controller/rest/GenerateApiController.java
+@@ -15,7 +15,6 @@
+  */
+ package com.restfiddle.controller.rest;
+ 
+-import java.util.Date;
+ import java.util.List;
+ 
+ import org.json.JSONArray;
+@@ -40,7 +39,7 @@ import com.restfiddle.dto.StatusResponse;
+ import com.restfiddle.entity.BaseNode;
+ import com.restfiddle.entity.GenericEntity;
+ import com.restfiddle.entity.GenericEntityField;
+-
++import com.restfiddle.util.apicreator.*;
+ @RestController
+ @Transactional
+ public class GenerateApiController {
+@@ -74,123 +73,21 @@ public class GenerateApiController {
+ 	return generateApi(entityNode);
+     }
+ 
+-    public StatusResponse generateApi(BaseNode entityNode) {
+-	GenericEntity genericEntity = entityNode.getGenericEntity();
+-
+-	// API to GENERATE >> List of Entity Data
+-	ConversationDTO conversationDTO = new ConversationDTO();
+-	RfRequestDTO rfRequestDTO = new RfRequestDTO();
+-
+-	String projectId = entityNode.getProjectId();
+-
+-	rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/" + entityNode.getName() + "/list");
+-	rfRequestDTO.setMethodType("GET");
+-	conversationDTO.setRfRequestDTO(rfRequestDTO);
+-
+-	ConversationDTO createdConversation = conversationController.create(conversationDTO);
+-	conversationDTO.setId(createdConversation.getId());
+-
+-	String nodeName = "Get List of " + entityNode.getName();
+-	NodeDTO createdNode = createNode(nodeName, entityNode.getId(), projectId, conversationDTO);
+-
+-	// API to GENERATE >> Get Entity Data By Id
+-	conversationDTO = new ConversationDTO();
+-	rfRequestDTO = new RfRequestDTO();
+-	rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/" + entityNode.getName() + "/{uuid}");
+-	rfRequestDTO.setMethodType("GET");
+-	conversationDTO.setRfRequestDTO(rfRequestDTO);
+-
+-	createdConversation = conversationController.create(conversationDTO);
+-	conversationDTO.setId(createdConversation.getId());
+-
+-	nodeName = "Get " + entityNode.getName() + " by Id";
+-	createdNode = createNode(nodeName, entityNode.getId(), projectId, conversationDTO);
+-
+-	// API to GENERATE >> Delete Entity Data By Id
+-	conversationDTO = new ConversationDTO();
+-	rfRequestDTO = new RfRequestDTO();
+-	rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/" + entityNode.getName() + "/{uuid}");
+-	rfRequestDTO.setMethodType("DELETE");
+-	conversationDTO.setRfRequestDTO(rfRequestDTO);
+-
+-	createdConversation = conversationController.create(conversationDTO);
+-	conversationDTO.setId(createdConversation.getId());
+-
+-	nodeName = "Delete " + entityNode.getName();
+-	createdNode = createNode(nodeName, entityNode.getId(), projectId, conversationDTO);
+-
+-	// API to GENERATE >> Create Entity Data
+-	conversationDTO = new ConversationDTO();
+-	rfRequestDTO = new RfRequestDTO();
+-	rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/" + entityNode.getName());
+-	rfRequestDTO.setMethodType("POST");
+-
+-	JSONObject jsonObject = getFieldJson(genericEntity);
+-	// Make a pretty-printed JSON text of this JSONObject.
+-	rfRequestDTO.setApiBody(jsonObject.toString(4));
+-	conversationDTO.setRfRequestDTO(rfRequestDTO);
+-
+-	createdConversation = conversationController.create(conversationDTO);
+-	conversationDTO.setId(createdConversation.getId());
+-
+-	nodeName = "Create " + entityNode.getName();
+-	createdNode = createNode(nodeName, entityNode.getId(), projectId, conversationDTO);
+-
+-	// API to GENERATE >> Update Entity Data
+-	conversationDTO = new ConversationDTO();
+-	rfRequestDTO = new RfRequestDTO();
+-	rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/" + entityNode.getName() + "/{uuid}");
+-	rfRequestDTO.setMethodType("PUT");
+-
+-	jsonObject = getFieldJson(genericEntity);
+-	// id is required in case of update.
+-	jsonObject.put("_id", "{uuid}");
+-
+-	rfRequestDTO.setApiBody(jsonObject.toString(4));
+-	conversationDTO.setRfRequestDTO(rfRequestDTO);
+-
+-	createdConversation = conversationController.create(conversationDTO);
+-	conversationDTO.setId(createdConversation.getId());
+-
+-	nodeName = "Update " + entityNode.getName();
+-	createdNode = createNode(nodeName, entityNode.getId(), projectId, conversationDTO);
+-	
+-	if(entityNode.getName().equals("User")){
+-	 // API to GENERATE >> Login Entity
+-	    conversationDTO = new ConversationDTO();
+-	    rfRequestDTO = new RfRequestDTO();
+-	    rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/login");
+-	    rfRequestDTO.setMethodType("POST");
+-
+-	    JSONObject json = new JSONObject();
+-	    json.put("username", "");
+-	    json.put("password", "");
+-
+-	    rfRequestDTO.setApiBody(json.toString(4));
+-	    conversationDTO.setRfRequestDTO(rfRequestDTO);
+-
+-	    createdConversation = conversationController.create(conversationDTO);
+-	    conversationDTO.setId(createdConversation.getId());
+-
+-	    nodeName = "Login " + entityNode.getName();
+-	    createdNode = createNode(nodeName, entityNode.getId(), projectId, conversationDTO);
+-	    
+-	 // API to GENERATE >> Get Entity Data By Id
+-	    conversationDTO = new ConversationDTO();
+-	    rfRequestDTO = new RfRequestDTO();
+-	    rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/logout?authToken=");
+-	    rfRequestDTO.setMethodType("GET");
+-	    conversationDTO.setRfRequestDTO(rfRequestDTO);
+-
+-	    createdConversation = conversationController.create(conversationDTO);
+-	    conversationDTO.setId(createdConversation.getId());
+-
+-	    nodeName = "Logout " + entityNode.getName();
+-	    createdNode = createNode(nodeName, entityNode.getId(), projectId, conversationDTO);
+-	}
+-
+-	return null;
+-    }
++  public StatusResponse generateApi(BaseNode entityNode) {
++
++    ApiCreator creator = new RestApiCreator(entityNode, conversationController, nodeController, hostUri);
++    creator.create();
++
++  	if(entityNode.getName().equals("User")){
++      creator = new LoginApiCreator(entityNode, conversationController, nodeController, hostUri);
++      creator.create();
++      creator = new LogoutApiCreator(entityNode, conversationController, nodeController, hostUri);
++      creator.create();
++
++  	}
++
++	  return null;
++  }
+ 
+     private NodeDTO createNode(String nodeName, String parentId, String projectId, ConversationDTO conversationDTO) {
+ 	NodeDTO childNode = new NodeDTO();
+@@ -200,33 +97,4 @@ public class GenerateApiController {
+ 	NodeDTO createdNode = nodeController.create(parentId, childNode);
+ 	return createdNode;
+     }
+-
+-    private JSONObject getFieldJson(GenericEntity genericEntity) {
+-	// Create JSON template for the entity data based on fields and set it as api body.
+-	List<GenericEntityField> fields = genericEntity.getFields();
+-	JSONObject jsonObject = new JSONObject();
+-	for (GenericEntityField genericEntityField : fields) {
+-	    String type = genericEntityField.getType();
+-	    if ("STRING".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), "");
+-	    } else if ("NUMBER".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), Long.valueOf(1));
+-	    } else if ("BOOLEAN".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), false);
+-	    } else if ("DATE".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), new Date());
+-	    } else if ("NUMBER".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), Long.valueOf(1));
+-	    } else if ("OBJECT".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), new JSONObject());
+-	    } else if ("ARRAY".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), new JSONArray());
+-	    } else if ("Geographic point".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), new JSONObject("{\"lat\" : 18.5204303,\"lng\" : 73.8567437}"));
+-	    } else if ("relation".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), new JSONObject("{\"_rel\":{\"entity\" : \"{Entity Name}\",\"_id\" : \"{Entity _id}\"}}"));
+-	    }
+-	}
+-	return jsonObject;
+-    }
+ }
+diff --git a/src/main/java/com/restfiddle/entity/GenericEntity.java b/src/main/java/com/restfiddle/entity/GenericEntity.java
+index e59ccbf..f306407 100644
+--- a/src/main/java/com/restfiddle/entity/GenericEntity.java
++++ b/src/main/java/com/restfiddle/entity/GenericEntity.java
+@@ -16,7 +16,10 @@
+ package com.restfiddle.entity;
+ 
+ import java.util.ArrayList;
++import java.util.Date;
+ import java.util.List;
++import org.json.JSONObject;
++import org.json.JSONArray;
+ 
+ import org.springframework.data.mongodb.core.mapping.DBRef;
+ 
+@@ -54,4 +57,32 @@ public class GenericEntity extends NamedEntity {
+ 	this.baseNodeId = baseNodeId;
+     }
+ 
++    public JSONObject getTemplateJSON() {
++      // Create JSON template for the entity data based on fields and set it as api body.
++      List<GenericEntityField> fields = this.getFields();
++      JSONObject jsonObject = new JSONObject();
++      for (GenericEntityField genericEntityField : fields) {
++        String type = genericEntityField.getType();
++        if ("STRING".equalsIgnoreCase(type)) {
++          jsonObject.put(genericEntityField.getName(), "");
++        } else if ("NUMBER".equalsIgnoreCase(type)) {
++          jsonObject.put(genericEntityField.getName(), Long.valueOf(1));
++        } else if ("BOOLEAN".equalsIgnoreCase(type)) {
++          jsonObject.put(genericEntityField.getName(), false);
++        } else if ("DATE".equalsIgnoreCase(type)) {
++          jsonObject.put(genericEntityField.getName(), new Date());
++        } else if ("NUMBER".equalsIgnoreCase(type)) {
++          jsonObject.put(genericEntityField.getName(), Long.valueOf(1));
++        } else if ("OBJECT".equalsIgnoreCase(type)) {
++          jsonObject.put(genericEntityField.getName(), new JSONObject());
++        } else if ("ARRAY".equalsIgnoreCase(type)) {
++          jsonObject.put(genericEntityField.getName(), new JSONArray());
++        } else if ("Geographic point".equalsIgnoreCase(type)) {
++          jsonObject.put(genericEntityField.getName(), new JSONObject("{\"lat\" : 18.5204303,\"lng\" : 73.8567437}"));
++        } else if ("relation".equalsIgnoreCase(type)) {
++          jsonObject.put(genericEntityField.getName(), new JSONObject("{\"_rel\":{\"entity\" : \"{Entity Name}\",\"_id\" : \"{Entity _id}\"}}"));
++        }
++      }
++      return jsonObject;
++    }
+ }
+diff --git a/src/main/java/com/restfiddle/util/apicreator/ApiCreator.java b/src/main/java/com/restfiddle/util/apicreator/ApiCreator.java
+new file mode 100644
+index 0000000..6837809
+--- /dev/null
++++ b/src/main/java/com/restfiddle/util/apicreator/ApiCreator.java
+@@ -0,0 +1,54 @@
++package com.restfiddle.util.apicreator;
++
++import java.util.Date;
++
++import com.restfiddle.controller.rest.ConversationController;
++import com.restfiddle.controller.rest.NodeController;
++
++import com.restfiddle.dto.ConversationDTO;
++import com.restfiddle.dto.NodeDTO;
++import com.restfiddle.dto.RfRequestDTO;
++
++import com.restfiddle.entity.BaseNode;
++import com.restfiddle.entity.GenericEntity;
++
++
++public abstract class ApiCreator{
++  BaseNode entityNode;
++
++  ConversationController conversationController;
++  NodeController nodeController;
++
++  GenericEntity genericEntity;
++  String hostUri;
++
++  public ApiCreator(BaseNode entityNode, ConversationController conversationController, NodeController nodeController, String hostUri){
++    this.entityNode = entityNode;
++    this.conversationController = conversationController;
++    this.nodeController = nodeController;
++    this.genericEntity = entityNode.getGenericEntity();
++    this.hostUri = hostUri;
++  }
++
++  public abstract NodeDTO create();
++  public class NodeBuilder {
++    private NodeDTO newNode;
++
++    public NodeBuilder(String nodeName){
++      newNode = new NodeDTO();
++      newNode.setName(nodeName);
++    }
++    public NodeBuilder setProjectId(String projectId){
++      newNode.setProjectId(projectId);
++      return this;
++    }
++    public NodeBuilder setConversationDTO(ConversationDTO conversationDTO){
++      newNode.setConversationDTO(conversationDTO);
++      return this;
++    }
++    public NodeDTO build(){
++      NodeDTO createdNode = nodeController.create(entityNode.getId(), newNode);
++      return createdNode;
++    }
++  }
++}
+\ No newline at end of file
+diff --git a/src/main/java/com/restfiddle/util/apicreator/CreateApiCreator.java b/src/main/java/com/restfiddle/util/apicreator/CreateApiCreator.java
+new file mode 100644
+index 0000000..bdf9e0a
+--- /dev/null
++++ b/src/main/java/com/restfiddle/util/apicreator/CreateApiCreator.java
+@@ -0,0 +1,42 @@
++package com.restfiddle.util.apicreator;
++
++import com.restfiddle.controller.rest.ConversationController;
++import com.restfiddle.controller.rest.NodeController;
++import com.restfiddle.dto.NodeDTO;
++import com.restfiddle.dto.RfRequestDTO;
++import com.restfiddle.dto.ConversationDTO;
++import com.restfiddle.entity.BaseNode;
++import com.restfiddle.entity.GenericEntity;
++
++import org.json.JSONObject;
++
++
++public class CreateApiCreator extends ApiCreator {
++  public CreateApiCreator(BaseNode entityNode, ConversationController conversationController, NodeController nodeController, String hostUri){
++    super(entityNode, conversationController, nodeController, hostUri);
++  }
++  public NodeDTO create(){
++    String projectId = entityNode.getProjectId();
++
++    // API to GENERATE >> Create Entity Data
++    ConversationDTO conversationDTO = new ConversationDTO();
++    RfRequestDTO rfRequestDTO = new RfRequestDTO();
++    rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/" + entityNode.getName());
++    rfRequestDTO.setMethodType("POST");
++
++    JSONObject jsonObject = genericEntity.getTemplateJSON();
++    // Make a pretty-printed JSON text of this JSONObject.
++    rfRequestDTO.setApiBody(jsonObject.toString(4));
++    conversationDTO.setRfRequestDTO(rfRequestDTO);
++
++    ConversationDTO createdConversation = conversationController.create(conversationDTO);
++    conversationDTO.setId(createdConversation.getId());
++
++    String nodeName = "Create " + entityNode.getName();
++    NodeDTO createdNode = new NodeBuilder(nodeName)
++      .setProjectId(projectId)
++      .setConversationDTO(conversationDTO)
++      .build();
++    return createdNode;
++  }
++}
+\ No newline at end of file
+diff --git a/src/main/java/com/restfiddle/util/apicreator/DeleteApiCreator.java b/src/main/java/com/restfiddle/util/apicreator/DeleteApiCreator.java
+new file mode 100644
+index 0000000..5431a83
+--- /dev/null
++++ b/src/main/java/com/restfiddle/util/apicreator/DeleteApiCreator.java
+@@ -0,0 +1,35 @@
++package com.restfiddle.util.apicreator;
++
++import com.restfiddle.controller.rest.ConversationController;
++import com.restfiddle.controller.rest.NodeController;
++import com.restfiddle.dto.NodeDTO;
++import com.restfiddle.dto.RfRequestDTO;
++import com.restfiddle.dto.ConversationDTO;
++import com.restfiddle.entity.BaseNode;
++import com.restfiddle.entity.GenericEntity;
++
++public class DeleteApiCreator extends ApiCreator {
++  public DeleteApiCreator(BaseNode entityNode, ConversationController conversationController, NodeController nodeController, String hostUri){
++    super(entityNode, conversationController, nodeController, hostUri);
++  }
++  public NodeDTO create(){
++    String projectId = entityNode.getProjectId();
++
++    // API to GENERATE >> Delete Entity Data By Id
++    ConversationDTO conversationDTO = new ConversationDTO();
++    RfRequestDTO rfRequestDTO = new RfRequestDTO();
++    rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/" + entityNode.getName() + "/{uuid}");
++    rfRequestDTO.setMethodType("DELETE");
++    conversationDTO.setRfRequestDTO(rfRequestDTO);
++
++    ConversationDTO createdConversation = conversationController.create(conversationDTO);
++    conversationDTO.setId(createdConversation.getId());
++
++    String nodeName = "Delete " + entityNode.getName();
++    NodeDTO createdNode = new NodeBuilder(nodeName)
++      .setProjectId(projectId)
++      .setConversationDTO(conversationDTO)
++      .build();
++    return createdNode;
++  }
++}
+\ No newline at end of file
+diff --git a/src/main/java/com/restfiddle/util/apicreator/IndexApiCreator.java b/src/main/java/com/restfiddle/util/apicreator/IndexApiCreator.java
+new file mode 100644
+index 0000000..6974fc1
+--- /dev/null
++++ b/src/main/java/com/restfiddle/util/apicreator/IndexApiCreator.java
+@@ -0,0 +1,35 @@
++package com.restfiddle.util.apicreator;
++
++import com.restfiddle.controller.rest.ConversationController;
++import com.restfiddle.controller.rest.NodeController;
++import com.restfiddle.dto.NodeDTO;
++import com.restfiddle.dto.RfRequestDTO;
++import com.restfiddle.dto.ConversationDTO;
++import com.restfiddle.entity.BaseNode;
++import com.restfiddle.entity.GenericEntity;
++
++public class IndexApiCreator extends ApiCreator {
++  public IndexApiCreator(BaseNode entityNode, ConversationController conversationController, NodeController nodeController, String hostUri){
++    super(entityNode, conversationController, nodeController, hostUri);
++  }
++  public NodeDTO create(){
++    String projectId = entityNode.getProjectId();
++    // API to GENERATE >> List of Entity Data
++    ConversationDTO conversationDTO = new ConversationDTO();
++    RfRequestDTO rfRequestDTO = new RfRequestDTO();
++
++    rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/" + entityNode.getName() + "/list");
++    rfRequestDTO.setMethodType("GET");
++    conversationDTO.setRfRequestDTO(rfRequestDTO);
++
++    ConversationDTO createdConversation = conversationController.create(conversationDTO);
++    conversationDTO.setId(createdConversation.getId());
++
++    String nodeName = "Get List of " + entityNode.getName();
++    NodeDTO createdNode = new NodeBuilder(nodeName)
++      .setProjectId(projectId)
++      .setConversationDTO(conversationDTO)
++      .build();
++    return createdNode;
++  }
++}
+\ No newline at end of file
+diff --git a/src/main/java/com/restfiddle/util/apicreator/LoginApiCreator.java b/src/main/java/com/restfiddle/util/apicreator/LoginApiCreator.java
+new file mode 100644
+index 0000000..084813a
+--- /dev/null
++++ b/src/main/java/com/restfiddle/util/apicreator/LoginApiCreator.java
+@@ -0,0 +1,43 @@
++package com.restfiddle.util.apicreator;
++
++import com.restfiddle.controller.rest.ConversationController;
++import com.restfiddle.controller.rest.NodeController;
++import com.restfiddle.dto.NodeDTO;
++import com.restfiddle.dto.RfRequestDTO;
++import com.restfiddle.dto.ConversationDTO;
++import com.restfiddle.entity.BaseNode;
++import com.restfiddle.entity.GenericEntity;
++
++import org.json.JSONObject;
++
++public class LoginApiCreator extends ApiCreator {
++  public LoginApiCreator(BaseNode entityNode, ConversationController conversationController, NodeController nodeController, String hostUri){
++    super(entityNode, conversationController, nodeController, hostUri);
++  }
++  public NodeDTO create(){
++    String projectId = entityNode.getProjectId();
++
++    // API to GENERATE >> Login Entity
++    ConversationDTO conversationDTO = new ConversationDTO();
++    RfRequestDTO rfRequestDTO = new RfRequestDTO();
++    rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/login");
++    rfRequestDTO.setMethodType("POST");
++
++    JSONObject json = new JSONObject();
++    json.put("username", "");
++    json.put("password", "");
++
++    rfRequestDTO.setApiBody(json.toString(4));
++    conversationDTO.setRfRequestDTO(rfRequestDTO);
++
++    ConversationDTO createdConversation = conversationController.create(conversationDTO);
++    conversationDTO.setId(createdConversation.getId());
++
++    String nodeName = "Login " + entityNode.getName();
++    NodeDTO createdNode = new NodeBuilder(nodeName)
++      .setProjectId(projectId)
++      .setConversationDTO(conversationDTO)
++      .build();
++    return createdNode;
++  }
++}
+\ No newline at end of file
+diff --git a/src/main/java/com/restfiddle/util/apicreator/LogoutApiCreator.java b/src/main/java/com/restfiddle/util/apicreator/LogoutApiCreator.java
+new file mode 100644
+index 0000000..2e65929
+--- /dev/null
++++ b/src/main/java/com/restfiddle/util/apicreator/LogoutApiCreator.java
+@@ -0,0 +1,35 @@
++package com.restfiddle.util.apicreator;
++
++import com.restfiddle.controller.rest.ConversationController;
++import com.restfiddle.controller.rest.NodeController;
++import com.restfiddle.dto.NodeDTO;
++import com.restfiddle.dto.RfRequestDTO;
++import com.restfiddle.dto.ConversationDTO;
++import com.restfiddle.entity.BaseNode;
++import com.restfiddle.entity.GenericEntity;
++
++public class LogoutApiCreator extends ApiCreator {
++  public LogoutApiCreator(BaseNode entityNode, ConversationController conversationController, NodeController nodeController, String hostUri){
++    super(entityNode, conversationController, nodeController, hostUri);
++  }
++  public NodeDTO create(){
++    String projectId = entityNode.getProjectId();
++
++     // API to GENERATE >> Get Entity Data By Id
++    ConversationDTO conversationDTO = new ConversationDTO();
++    RfRequestDTO rfRequestDTO = new RfRequestDTO();
++    rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/logout?authToken=");
++    rfRequestDTO.setMethodType("GET");
++    conversationDTO.setRfRequestDTO(rfRequestDTO);
++
++    ConversationDTO createdConversation = conversationController.create(conversationDTO);
++    conversationDTO.setId(createdConversation.getId());
++
++    String nodeName = "Logout " + entityNode.getName();
++    NodeDTO createdNode = new NodeBuilder(nodeName)
++      .setProjectId(projectId)
++      .setConversationDTO(conversationDTO)
++      .build();
++    return createdNode;
++  }
++}
+\ No newline at end of file
+diff --git a/src/main/java/com/restfiddle/util/apicreator/RestApiCreator.java b/src/main/java/com/restfiddle/util/apicreator/RestApiCreator.java
+new file mode 100644
+index 0000000..9bc91b0
+--- /dev/null
++++ b/src/main/java/com/restfiddle/util/apicreator/RestApiCreator.java
+@@ -0,0 +1,35 @@
++package com.restfiddle.util.apicreator;
++
++import com.restfiddle.controller.rest.ConversationController;
++import com.restfiddle.controller.rest.NodeController;
++import com.restfiddle.dto.NodeDTO;
++import com.restfiddle.dto.RfRequestDTO;
++import com.restfiddle.dto.ConversationDTO;
++import com.restfiddle.entity.BaseNode;
++import com.restfiddle.entity.GenericEntity;
++import java.util.ArrayList;
++
++public class RestApiCreator extends ApiCreator {
++  private ArrayList<ApiCreator> creators;
++  public RestApiCreator(BaseNode entityNode, ConversationController conversationController, NodeController nodeController, String hostUri){
++    super(entityNode, conversationController, nodeController, hostUri);
++    creators = new ArrayList<ApiCreator>();
++    ApiCreator apicreator = new ShowApiCreator(entityNode, conversationController, nodeController, hostUri);
++    creators.add(apicreator);
++    apicreator = new CreateApiCreator(entityNode, conversationController, nodeController, hostUri);
++    creators.add(apicreator);
++    apicreator = new UpdateApiCreator(entityNode, conversationController, nodeController, hostUri);
++    creators.add(apicreator);
++    apicreator = new DeleteApiCreator(entityNode, conversationController, nodeController, hostUri);
++    creators.add(apicreator);
++    apicreator = new IndexApiCreator(entityNode, conversationController, nodeController, hostUri);
++    creators.add(apicreator);
++  }
++  public NodeDTO create(){
++    NodeDTO node = null;
++    for (ApiCreator creator : creators){
++      node = creator.create();
++    }
++    return node;
++  }
++}
+\ No newline at end of file
+diff --git a/src/main/java/com/restfiddle/util/apicreator/ShowApiCreator.java b/src/main/java/com/restfiddle/util/apicreator/ShowApiCreator.java
+new file mode 100644
+index 0000000..1954491
+--- /dev/null
++++ b/src/main/java/com/restfiddle/util/apicreator/ShowApiCreator.java
+@@ -0,0 +1,34 @@
++package com.restfiddle.util.apicreator;
++
++import com.restfiddle.controller.rest.ConversationController;
++import com.restfiddle.controller.rest.NodeController;
++import com.restfiddle.dto.NodeDTO;
++import com.restfiddle.dto.RfRequestDTO;
++import com.restfiddle.dto.ConversationDTO;
++import com.restfiddle.entity.BaseNode;
++import com.restfiddle.entity.GenericEntity;
++
++public class ShowApiCreator extends ApiCreator {
++  public ShowApiCreator(BaseNode entityNode, ConversationController conversationController, NodeController nodeController, String hostUri){
++    super(entityNode, conversationController, nodeController, hostUri);
++  }
++  public NodeDTO create(){
++    String projectId = entityNode.getProjectId();
++    // API to GENERATE >> Get Entity Data By Id
++    ConversationDTO conversationDTO = new ConversationDTO();
++    RfRequestDTO rfRequestDTO = new RfRequestDTO();
++    rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/" + entityNode.getName() + "/{uuid}");
++    rfRequestDTO.setMethodType("GET");
++    conversationDTO.setRfRequestDTO(rfRequestDTO);
++
++    ConversationDTO createdConversation = conversationController.create(conversationDTO);
++    conversationDTO.setId(createdConversation.getId());
++
++    String nodeName = "Get " + entityNode.getName() + " by Id";
++    NodeDTO createdNode = new NodeBuilder(nodeName)
++      .setProjectId(projectId)
++      .setConversationDTO(conversationDTO)
++      .build();
++    return createdNode;
++  }
++}
+\ No newline at end of file
+diff --git a/src/main/java/com/restfiddle/util/apicreator/UpdateApiCreator.java b/src/main/java/com/restfiddle/util/apicreator/UpdateApiCreator.java
+new file mode 100644
+index 0000000..a3a59aa
+--- /dev/null
++++ b/src/main/java/com/restfiddle/util/apicreator/UpdateApiCreator.java
+@@ -0,0 +1,43 @@
++package com.restfiddle.util.apicreator;
++
++import com.restfiddle.controller.rest.ConversationController;
++import com.restfiddle.controller.rest.NodeController;
++import com.restfiddle.dto.ConversationDTO;
++import com.restfiddle.dto.NodeDTO;
++import com.restfiddle.dto.RfRequestDTO;
++import com.restfiddle.entity.BaseNode;
++import com.restfiddle.entity.GenericEntity;
++
++import org.json.JSONObject;
++
++
++public class UpdateApiCreator extends ApiCreator {
++  public UpdateApiCreator(BaseNode entityNode, ConversationController conversationController, NodeController nodeController, String hostUri){
++    super(entityNode, conversationController, nodeController, hostUri);
++  }
++  public NodeDTO create(){
++    String projectId = entityNode.getProjectId();
++    // API to GENERATE >> Update Entity Data
++    ConversationDTO conversationDTO = new ConversationDTO();
++    RfRequestDTO rfRequestDTO = new RfRequestDTO();
++    rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/" + entityNode.getName() + "/{uuid}");
++    rfRequestDTO.setMethodType("PUT");
++
++    JSONObject jsonObject = genericEntity.getTemplateJSON();
++    // id is required in case of update.
++    jsonObject.put("_id", "{uuid}");
++
++    rfRequestDTO.setApiBody(jsonObject.toString(4));
++    conversationDTO.setRfRequestDTO(rfRequestDTO);
++
++    ConversationDTO createdConversation = conversationController.create(conversationDTO);
++    conversationDTO.setId(createdConversation.getId());
++
++    String nodeName = "Update " + entityNode.getName();
++    NodeDTO createdNode = new NodeBuilder(nodeName)
++      .setProjectId(projectId)
++      .setConversationDTO(conversationDTO)
++      .build();
++    return createdNode;
++  }
++}
+\ No newline at end of file

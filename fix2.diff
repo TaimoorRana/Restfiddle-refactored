@@ -1,0 +1,201 @@
+diff --git a/src/main/java/com/restfiddle/controller/rest/GenerateApiController.java b/src/main/java/com/restfiddle/controller/rest/GenerateApiController.java
+index 43e891c..9d4ebb6 100644
+--- a/src/main/java/com/restfiddle/controller/rest/GenerateApiController.java
++++ b/src/main/java/com/restfiddle/controller/rest/GenerateApiController.java
+@@ -40,6 +40,10 @@ import com.restfiddle.dto.StatusResponse;
+ import com.restfiddle.entity.BaseNode;
+ import com.restfiddle.entity.GenericEntity;
+ import com.restfiddle.entity.GenericEntityField;
++import com.restfiddle.util.apicreator.ApiCreator;
++import com.restfiddle.util.apicreator.LoginApiCreator;
++import com.restfiddle.util.apicreator.LogoutApiCreator;
++import com.restfiddle.util.apicreator.RestApiCreator;
+ 
+ @RestController
+ @Transactional
+@@ -77,118 +81,16 @@ public class GenerateApiController {
+     public StatusResponse generateApi(BaseNode entityNode) {
+ 	GenericEntity genericEntity = entityNode.getGenericEntity();
+ 
+-	// API to GENERATE >> List of Entity Data
+-	ConversationDTO conversationDTO = new ConversationDTO();
+-	RfRequestDTO rfRequestDTO = new RfRequestDTO();
++	  ApiCreator creator = new RestApiCreator(entityNode, conversationController, nodeController, hostUri);
++	    creator.create();
++	  	if(entityNode.getName().equals("User")){
++	  	  creator = new LoginApiCreator(entityNode, conversationController, nodeController, hostUri);
++	      creator.create();
++	      creator = new LogoutApiCreator(entityNode, conversationController, nodeController, hostUri);
++	      creator.create();
+ 
+-	String projectId = entityNode.getProjectId();
+-
+-	rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/" + entityNode.getName() + "/list");
+-	rfRequestDTO.setMethodType("GET");
+-	conversationDTO.setRfRequestDTO(rfRequestDTO);
+-
+-	ConversationDTO createdConversation = conversationController.create(conversationDTO);
+-	conversationDTO.setId(createdConversation.getId());
+-
+-	String nodeName = "Get List of " + entityNode.getName();
+-	NodeDTO createdNode = createNode(nodeName, entityNode.getId(), projectId, conversationDTO);
+-
+-	// API to GENERATE >> Get Entity Data By Id
+-	conversationDTO = new ConversationDTO();
+-	rfRequestDTO = new RfRequestDTO();
+-	rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/" + entityNode.getName() + "/{uuid}");
+-	rfRequestDTO.setMethodType("GET");
+-	conversationDTO.setRfRequestDTO(rfRequestDTO);
+-
+-	createdConversation = conversationController.create(conversationDTO);
+-	conversationDTO.setId(createdConversation.getId());
+-
+-	nodeName = "Get " + entityNode.getName() + " by Id";
+-	createdNode = createNode(nodeName, entityNode.getId(), projectId, conversationDTO);
+-
+-	// API to GENERATE >> Delete Entity Data By Id
+-	conversationDTO = new ConversationDTO();
+-	rfRequestDTO = new RfRequestDTO();
+-	rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/" + entityNode.getName() + "/{uuid}");
+-	rfRequestDTO.setMethodType("DELETE");
+-	conversationDTO.setRfRequestDTO(rfRequestDTO);
+-
+-	createdConversation = conversationController.create(conversationDTO);
+-	conversationDTO.setId(createdConversation.getId());
+-
+-	nodeName = "Delete " + entityNode.getName();
+-	createdNode = createNode(nodeName, entityNode.getId(), projectId, conversationDTO);
+-
+-	// API to GENERATE >> Create Entity Data
+-	conversationDTO = new ConversationDTO();
+-	rfRequestDTO = new RfRequestDTO();
+-	rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/" + entityNode.getName());
+-	rfRequestDTO.setMethodType("POST");
+-
+-	JSONObject jsonObject = getFieldJson(genericEntity);
+-	// Make a pretty-printed JSON text of this JSONObject.
+-	rfRequestDTO.setApiBody(jsonObject.toString(4));
+-	conversationDTO.setRfRequestDTO(rfRequestDTO);
+-
+-	createdConversation = conversationController.create(conversationDTO);
+-	conversationDTO.setId(createdConversation.getId());
+-
+-	nodeName = "Create " + entityNode.getName();
+-	createdNode = createNode(nodeName, entityNode.getId(), projectId, conversationDTO);
+-
+-	// API to GENERATE >> Update Entity Data
+-	conversationDTO = new ConversationDTO();
+-	rfRequestDTO = new RfRequestDTO();
+-	rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/" + entityNode.getName() + "/{uuid}");
+-	rfRequestDTO.setMethodType("PUT");
+-
+-	jsonObject = getFieldJson(genericEntity);
+-	// id is required in case of update.
+-	jsonObject.put("_id", "{uuid}");
+-
+-	rfRequestDTO.setApiBody(jsonObject.toString(4));
+-	conversationDTO.setRfRequestDTO(rfRequestDTO);
+-
+-	createdConversation = conversationController.create(conversationDTO);
+-	conversationDTO.setId(createdConversation.getId());
+-
+-	nodeName = "Update " + entityNode.getName();
+-	createdNode = createNode(nodeName, entityNode.getId(), projectId, conversationDTO);
+-	
+-	if(entityNode.getName().equals("User")){
+-	 // API to GENERATE >> Login Entity
+-	    conversationDTO = new ConversationDTO();
+-	    rfRequestDTO = new RfRequestDTO();
+-	    rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/login");
+-	    rfRequestDTO.setMethodType("POST");
+-
+-	    JSONObject json = new JSONObject();
+-	    json.put("username", "");
+-	    json.put("password", "");
+-
+-	    rfRequestDTO.setApiBody(json.toString(4));
+-	    conversationDTO.setRfRequestDTO(rfRequestDTO);
+-
+-	    createdConversation = conversationController.create(conversationDTO);
+-	    conversationDTO.setId(createdConversation.getId());
+-
+-	    nodeName = "Login " + entityNode.getName();
+-	    createdNode = createNode(nodeName, entityNode.getId(), projectId, conversationDTO);
++	    	}
+ 	    
+-	 // API to GENERATE >> Get Entity Data By Id
+-	    conversationDTO = new ConversationDTO();
+-	    rfRequestDTO = new RfRequestDTO();
+-	    rfRequestDTO.setApiUrl(hostUri + "/api/" + projectId + "/entities/logout?authToken=");
+-	    rfRequestDTO.setMethodType("GET");
+-	    conversationDTO.setRfRequestDTO(rfRequestDTO);
+-
+-	    createdConversation = conversationController.create(conversationDTO);
+-	    conversationDTO.setId(createdConversation.getId());
+-
+-	    nodeName = "Logout " + entityNode.getName();
+-	    createdNode = createNode(nodeName, entityNode.getId(), projectId, conversationDTO);
+-	}
+-
+ 	return null;
+     }
+ 
+@@ -201,32 +103,5 @@ public class GenerateApiController {
+ 	return createdNode;
+     }
+ 
+-    private JSONObject getFieldJson(GenericEntity genericEntity) {
+-	// Create JSON template for the entity data based on fields and set it as api body.
+-	List<GenericEntityField> fields = genericEntity.getFields();
+-	JSONObject jsonObject = new JSONObject();
+-	for (GenericEntityField genericEntityField : fields) {
+-	    String type = genericEntityField.getType();
+-	    if ("STRING".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), "");
+-	    } else if ("NUMBER".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), Long.valueOf(1));
+-	    } else if ("BOOLEAN".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), false);
+-	    } else if ("DATE".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), new Date());
+-	    } else if ("NUMBER".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), Long.valueOf(1));
+-	    } else if ("OBJECT".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), new JSONObject());
+-	    } else if ("ARRAY".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), new JSONArray());
+-	    } else if ("Geographic point".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), new JSONObject("{\"lat\" : 18.5204303,\"lng\" : 73.8567437}"));
+-	    } else if ("relation".equalsIgnoreCase(type)) {
+-		jsonObject.put(genericEntityField.getName(), new JSONObject("{\"_rel\":{\"entity\" : \"{Entity Name}\",\"_id\" : \"{Entity _id}\"}}"));
+-	    }
+-	}
+-	return jsonObject;
+-    }
++
+ }
+diff --git a/src/main/java/com/restfiddle/entity/GenericEntity.java b/src/main/java/com/restfiddle/entity/GenericEntity.java
+index e59ccbf..cef1fed 100644
+--- a/src/main/java/com/restfiddle/entity/GenericEntity.java
++++ b/src/main/java/com/restfiddle/entity/GenericEntity.java
+@@ -16,10 +16,12 @@
+ package com.restfiddle.entity;
+ 
+ import java.util.ArrayList;
++import java.util.Date;
+ import java.util.List;
+ 
+ import org.springframework.data.mongodb.core.mapping.DBRef;
+-
++import org.json.JSONObject;
++import org.json.JSONArray;
+ public class GenericEntity extends NamedEntity {
+     private static final long serialVersionUID = 1L;
+ 
+@@ -53,5 +55,6 @@ public class GenericEntity extends NamedEntity {
+     public void setBaseNodeId(String baseNodeId) {
+ 	this.baseNodeId = baseNodeId;
+     }
++   
+ 
+ }
